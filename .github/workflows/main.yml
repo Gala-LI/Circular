@@ -1,0 +1,71 @@
+name: Generate circulars.json
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Find matching PDFs in repo root: GCYYYY0MMDD_Merged.pdf
+          # Example: GC202600109_Merged.pdf -> date 2026-01-09
+          files=$(ls -1 GC?????????_Merged.pdf 2>/dev/null || true)
+
+          python3 - <<'PY'
+          import glob, json, re, datetime
+
+          tz = "America/New_York"
+          pattern = "GCYYYY0MMDD_Merged.pdf"
+          rx = re.compile(r'^GC(\d{4})0(\d{2})(\d{2})_Merged\.pdf$')
+
+          items = []
+          for f in glob.glob("GC?????????_Merged.pdf"):
+            m = rx.match(f)
+            if not m:
+              continue
+            yyyy, mm, dd = m.group(1), m.group(2), m.group(3)
+            date = f"{yyyy}-{mm}-{dd}"
+            items.append({"date": date, "file": f})
+
+          items.sort(key=lambda x: x["date"])
+
+          out = {
+            "timezone": tz,
+            "pattern": pattern,
+            "generatedAtUtc": datetime.datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
+            "circulars": items
+          }
+
+          with open("circulars.json", "w", encoding="utf-8") as fp:
+            json.dump(out, fp, indent=2)
+            fp.write("\n")
+
+          print(f"Wrote circulars.json with {len(items)} entries.")
+          PY
+
+      - name: Commit manifest if changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- circulars.json; then
+            echo "No changes to circulars.json"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add circulars.json
+          git commit -m "Auto-generate circulars.json"
+          git push
