@@ -1,8 +1,11 @@
 {
   "timezone": "America/New_York",
   "pattern": "GCYYYY0MMDD_Merged.pdf",
-  "generatedAtUtc": "MANUAL-SEED",
+  "generatedAtUtc": "2026-01-14T21:03:48Z",
   "circulars": [
-    { "date": "2026-01-09", "file": "GC202600109_Merged.pdf" }
+    {
+      "date": "2026-01-09",
+      "file": "GC202600109_Merged.pdf"
+    }
   ]
 }
