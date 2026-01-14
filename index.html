@@ -14,26 +14,132 @@
 
   <title>Weekly Circular</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      background: #ffffff;
-    }
-    iframe {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
+    html, body { margin: 0; padding: 0; height: 100%; background: #ffffff; }
+    iframe { width: 100%; height: 100%; border: none; }
+    .fallback { font-family: Arial, sans-serif; padding: 16px; }
   </style>
 </head>
 <body>
+  <iframe id="circularFrame" title="Weekly Store Circular"></iframe>
+  <noscript>
+    <div class="fallback">This page requires JavaScript to select the current circular.</div>
+  </noscript>
 
-  <iframe
-    src="GC202600109_Merged.pdf"
-    title="Weekly Store Circular">
-  </iframe>
+  <script>
+    // ---- Config ----
+    const MANIFEST_URL = 'circulars.json'; // generated automatically by GitHub Actions
+    const TIME_ZONE = 'America/New_York';
 
+    // Convert "YYYY-MM-DD" to a comparable number YYYYMMDD (integer)
+    function ymdToInt(ymd) {
+      return parseInt(ymd.replaceAll('-', ''), 10);
+    }
+
+    // Get today's date parts in a specific IANA timezone (no external libs)
+    function getZonedParts(date, timeZone) {
+      const dtf = new Intl.DateTimeFormat('en-CA', {
+        timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        weekday: 'short'
+      });
+      const parts = dtf.formatToParts(date);
+      const map = {};
+      for (const p of parts) map[p.type] = p.value;
+      // en-CA yields YYYY-MM-DD ordering in "value" fields; we use parts directly
+      return {
+        year: map.year,
+        month: map.month,
+        day: map.day,
+        weekday: map.weekday // e.g., "Fri"
+      };
+    }
+
+    // Compute the "current effective Friday" date in America/New_York as YYYY-MM-DD.
+    // Rule: it changes only at 12:00 AM Friday ET.
+    function currentEffectiveFridayYMD() {
+      // We must base on NY local date, not user locale.
+      // Approach: use NY-local date and weekday, then walk back to the most recent Friday (including today if Friday).
+      const now = new Date();
+
+      // Get NY-local weekday and Y-M-D
+      const p = getZonedParts(now, TIME_ZONE);
+      const y = parseInt(p.year, 10);
+      const m = parseInt(p.month, 10);
+      const d = parseInt(p.day, 10);
+
+      // To subtract days safely, operate in UTC with a constructed date at 12:00 UTC,
+      // then re-render in NY timezone after subtracting. This avoids DST edge cases.
+      const baseUtc = new Date(Date.UTC(y, m - 1, d, 12, 0, 0)); // "NY local date", anchored
+
+      // Map weekday to 0..6 with Fri target
+      const weekdayMap = { Sun:0, Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6 };
+      const w = weekdayMap[p.weekday];
+      const target = 5; // Fri
+      const daysBack = (w - target + 7) % 7; // 0 if Fri, 1 if Sat, etc.
+
+      const fridayUtc = new Date(baseUtc.getTime() - daysBack * 24 * 60 * 60 * 1000);
+
+      // Format that UTC moment as NY-local Y-M-D
+      const fridayParts = getZonedParts(fridayUtc, TIME_ZONE);
+      return `${fridayParts.year}-${fridayParts.month}-${fridayParts.day}`;
+    }
+
+    function pickCurrentCircular(manifest, effectiveFridayYMD) {
+      const eff = ymdToInt(effectiveFridayYMD);
+
+      // Keep only items with a parseable date, sort by date ascending
+      const list = (manifest.circulars || [])
+        .filter(x => typeof x.date === 'string' && typeof x.file === 'string')
+        .slice()
+        .sort((a, b) => ymdToInt(a.date) - ymdToInt(b.date));
+
+      // Pick the newest circular whose date <= effective Friday
+      let chosen = null;
+      for (const item of list) {
+        if (ymdToInt(item.date) <= eff) chosen = item;
+      }
+      return chosen;
+    }
+
+    async function main() {
+      const frame = document.getElementById('circularFrame');
+
+      let manifest;
+      try {
+        const res = await fetch(MANIFEST_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Failed to load manifest: ${res.status}`);
+        manifest = await res.json();
+      } catch (e) {
+        document.body.innerHTML = `<div class="fallback">
+          <b>Unable to load circular list.</b><br>
+          ${String(e)}
+        </div>`;
+        return;
+      }
+
+      const effectiveFriday = currentEffectiveFridayYMD();
+      const chosen = pickCurrentCircular(manifest, effectiveFriday);
+
+      if (!chosen) {
+        document.body.innerHTML = `<div class="fallback">
+          <b>No eligible circular found.</b><br>
+          Effective Friday (ET): ${effectiveFriday}<br>
+          Ensure at least one circular exists in the manifest.
+        </div>`;
+        return;
+      }
+
+      frame.src = chosen.file;
+
+      // Optional: expose a deterministic audit string in console
+      console.log(`[Circular] timezone=${TIME_ZONE} effectiveFriday=${effectiveFriday} chosenDate=${chosen.date} chosenFile=${chosen.file}`);
+    }
+
+    main();
+  </script>
 </body>
 </html>
