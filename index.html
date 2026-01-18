@@ -105,6 +105,53 @@
       return chosen;
     }
 
+    // --- Mobile detection (broad coverage) ---
+    function isMobileLikeDevice() {
+      const ua = navigator.userAgent || '';
+      const hasTouch = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+
+      // iPadOS 13+ may identify as "Mac" but has touch points
+      const isIPadOS = /Macintosh/.test(ua) && hasTouch;
+
+      const isIOS = /iPhone|iPad|iPod/.test(ua) || isIPadOS;
+      const isAndroid = /Android/.test(ua);
+
+      // Generic mobile indicators (covers many browsers/devices)
+      const isMobileUA = /Mobi|Mobile|Windows Phone|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+
+      // Prefer UA-CH when available (Chromium-based browsers)
+      const uaDataMobile = navigator.userAgentData && navigator.userAgentData.mobile === true;
+
+      return Boolean(uaDataMobile || isIOS || isAndroid || isMobileUA);
+    }
+
+    function renderMobileOpenUI(pdfUrl) {
+      // Simple, accessible UI: open in new tab + same tab.
+      document.body.innerHTML = `
+        <div class="fallback" style="max-width: 720px; margin: 0 auto; line-height: 1.4;">
+          <h2 style="margin: 0 0 8px 0;">Weekly Circular</h2>
+          <p style="margin: 0 0 14px 0;">
+            On many phones/tablets, embedded PDFs may show only the first page.
+            Use the button below to open the full circular.
+          </p>
+
+          <p style="margin: 0 0 10px 0;">
+            <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block; padding:12px 14px; border:1px solid #111; text-decoration:none; border-radius:8px;">
+              Open Circular (recommended)
+            </a>
+          </p>
+
+          <p style="margin: 0;">
+            <a href="${pdfUrl}"
+               style="display:inline-block; padding:12px 14px; border:1px solid #111; text-decoration:none; border-radius:8px;">
+              Open in this tab
+            </a>
+          </p>
+        </div>
+      `;
+    }
+
     async function main() {
       const frame = document.getElementById('circularFrame');
 
@@ -133,10 +180,18 @@
         return;
       }
 
+      // Mobile-like devices: avoid embedding PDF, open via link/UI.
+      if (isMobileLikeDevice()) {
+        renderMobileOpenUI(chosen.file);
+        console.log(`[Circular] MOBILE: timezone=${TIME_ZONE} effectiveFriday=${effectiveFriday} chosenDate=${chosen.date} chosenFile=${chosen.file}`);
+        return;
+      }
+
+      // Desktop/non-mobile: iframe is fine.
       frame.src = chosen.file;
 
       // Optional: expose a deterministic audit string in console
-      console.log(`[Circular] timezone=${TIME_ZONE} effectiveFriday=${effectiveFriday} chosenDate=${chosen.date} chosenFile=${chosen.file}`);
+      console.log(`[Circular] DESKTOP: timezone=${TIME_ZONE} effectiveFriday=${effectiveFriday} chosenDate=${chosen.date} chosenFile=${chosen.file}`);
     }
 
     main();
