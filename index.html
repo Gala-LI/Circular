@@ -19,6 +19,84 @@
     html, body { margin: 0; padding: 0; height: 100%; background: #ffffff; }
     iframe { width: 100%; height: 100%; border: none; }
     .fallback { font-family: Arial, sans-serif; padding: 16px; }
+
+    /* Mobile open page styling (kept separate from iframe experience) */
+    .mobileWrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: #ffffff;
+    }
+    .mobileCard {
+      width: 100%;
+      max-width: 520px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 22px 18px;
+      text-align: center;
+    }
+    .mobileTitle {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin: 6px 0 16px;
+      color: #111;
+    }
+    .mobileSub {
+      font-size: 15px;
+      margin: 0 0 18px;
+      color: rgba(0,0,0,0.65);
+    }
+    .ctaBtn {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 100%;
+      border: none;
+      border-radius: 14px;
+      padding: 16px 18px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      background: #5b2bd6; /* matches iOS Safari "visited link" vibe but solid */
+      color: #fff;
+      box-shadow: 0 10px 18px rgba(91,43,214,0.25);
+      transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+      outline: none;
+    }
+    .ctaBtn:active { transform: scale(0.98); }
+    .ctaBtn:focus-visible { box-shadow: 0 0 0 4px rgba(91,43,214,0.25), 0 10px 18px rgba(91,43,214,0.25); }
+
+    .btnRow {
+      position: relative;
+    }
+    .spinner {
+      display: none;
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.55);
+      border-top-color: rgba(255,255,255,1);
+      border-radius: 999px;
+      animation: spin 0.7s linear infinite;
+      pointer-events: none;
+    }
+    .ctaBtn[aria-busy="true"] { filter: brightness(0.95); }
+    .ctaBtn[aria-busy="true"] + .spinner { display: block; }
+
+    .finePrint {
+      margin: 14px 0 0;
+      font-size: 12px;
+      color: rgba(0,0,0,0.45);
+    }
+
+    @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -126,30 +204,34 @@
     }
 
     function renderMobileOpenUI(pdfUrl) {
-      // Simple, accessible UI: open in new tab + same tab.
+      // Single, clear CTA with visual feedback.
       document.body.innerHTML = `
-        <div class="fallback" style="max-width: 720px; margin: 0 auto; line-height: 1.4;">
-          <h2 style="margin: 0 0 8px 0;">Weekly Circular</h2>
-          <p style="margin: 0 0 14px 0;">
-            On many phones/tablets, embedded PDFs may show only the first page.
-            Use the button below to open the full circular.
-          </p>
-
-          <p style="margin: 0 0 10px 0;">
-            <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer"
-               style="display:inline-block; padding:12px 14px; border:1px solid #111; text-decoration:none; border-radius:8px;">
-              Open Circular (recommended)
-            </a>
-          </p>
-
-          <p style="margin: 0;">
-            <a href="${pdfUrl}"
-               style="display:inline-block; padding:12px 14px; border:1px solid #111; text-decoration:none; border-radius:8px;">
-              Open in this tab
-            </a>
-          </p>
+        <div class="mobileWrap">
+          <div class="mobileCard" role="region" aria-label="Weekly Circular">
+            <div class="mobileTitle">Weekly Circular</div>
+            <div class="btnRow">
+              <button id="openCircularBtn" class="ctaBtn" type="button" aria-busy="false">
+                Open Circular
+              </button>
+              <div class="spinner" aria-hidden="true"></div>
+            </div>
+            <div class="finePrint">Opens the full circular in your browser.</div>
+          </div>
         </div>
       `;
+
+      const btn = document.getElementById('openCircularBtn');
+
+      // Prefer direct navigation; use replace() to avoid users bouncing back to the gate.
+      // On iOS, a user gesture (button press) helps ensure the PDF opens reliably.
+      btn.addEventListener('click', () => {
+        btn.setAttribute('aria-busy', 'true');
+        btn.disabled = true;
+        // Slight delay so the spinner is visible immediately.
+        setTimeout(() => {
+          window.location.replace(pdfUrl);
+        }, 50);
+      });
     }
 
     async function main() {
@@ -180,7 +262,7 @@
         return;
       }
 
-      // Mobile-like devices: avoid embedding PDF, open via link/UI.
+      // Mobile-like devices: avoid embedding PDF, open via single CTA.
       if (isMobileLikeDevice()) {
         renderMobileOpenUI(chosen.file);
         console.log(`[Circular] MOBILE: timezone=${TIME_ZONE} effectiveFriday=${effectiveFriday} chosenDate=${chosen.date} chosenFile=${chosen.file}`);
