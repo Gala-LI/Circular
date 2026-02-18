@@ -138,3 +138,24 @@ GCYYYY0MMDD_Merged.pdf
 * If a Friday circular is missing, the site falls back to the most recent prior entry.
 * Rollover timezone is fixed to **America/New_York**, regardless of viewer location.
 
+---
+
+## Why this exists
+
+This site was built as a short-term solution.
+
+Our original circular site is hosted on WordPress. At the time, I had no experience with the platform and no working knowledge of its theme structure, templating model, or plugin ecosystem. Rather than delay delivery, I implemented this static alternative to ensure weekly circulars could continue to be published reliably.
+
+The goal was operational continuity — not platform replacement.
+
+Since then, I have gained sufficient familiarity with WordPress to replicate the same deterministic rollover logic and publishing workflow within the primary site. That implementation is now live.
+
+As a result, this repository is entering a dormant state. It remains available as:
+
+* A documented example of the static + CI automation pattern
+* A reference implementation of the ET-based rollover logic
+* A fallback option if the primary platform ever requires it again
+
+---
+
+
