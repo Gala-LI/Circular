@@ -119,8 +119,3 @@ This is a small repo, but it demonstrates practical engineering choices:
 * If a “current week” Friday PDF is missing, the site will fall back to the most recent prior entry in the manifest.
 * The timezone for rollover logic is fixed to **America/New_York** regardless of viewer locale.
 
-
-
----
-
-If you paste your actual workflow filename (or the real `circulars.json` schema), I can tune the README to match exactly (keeping it human-written, not prompt-output-ish).
