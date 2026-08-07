@@ -156,9 +156,8 @@ As a result, this repository is entering a dormant state. It remains available a
 * A reference implementation of the ET-based rollover logic
 * A fallback option if the primary platform ever requires it again
 
-## June 2026 Update
-
-* Management doesn't communicate with me.  Our wordpress (along with all of its assets) are gone for good.  This is now the primary platform again.  Way to go me for future planning.
+## August 2026 update
+frankstop no longer manages this repo or github account.  GodSpeed.
 
 ---
 
