@@ -159,7 +159,3 @@ As a result, this repository is entering a dormant state. It remains available a
 ## August 2026 update
 frankstop no longer manages this repo or github account.  GodSpeed.
 
----
-
-# Made by
-# frankstop, in/frankiejvaldez
